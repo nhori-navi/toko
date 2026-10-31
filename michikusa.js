@@ -12,29 +12,29 @@ const TASKS = [
   // ---- 自動判定 ----
   {id: 'mesh', app: 'walk', auto: 1, d: ALL, val: (c, d) => ({near: 3, walk: 5, far: 10})[d],
     t: v => `地図のマスを、新しく ${v}マス塗る`, s: () => 'まだ歩いていないマスに入ると、MichiMiru の地図のマスが塗られます',
-    ok: (c, v) => c.sum.newMesh >= v, prog: (c, v) => `${Math.min(c.sum.newMesh, v)}／${v}`, say: '……マスを、塗るか。'},
+    ok: (c, v) => c.sum.newMesh >= v, prog: (c, v) => `${Math.min(c.sum.newMesh, v)}／${v}`, say: '新しいマス、塗ってみる？'},
   {id: 'road', app: 'walk', auto: 1, d: ALL, val: (c, d) => ({near: 200, walk: 500, far: 1500})[d],
     t: v => `はじめて歩く道を ${fmtM(v)}`, s: () => '通ったことのない道を選んで歩きます',
-    ok: (c, v) => c.sum.newRoad >= v, prog: (c, v) => `${fmtM(Math.min(c.sum.newRoad, v))}／${fmtM(v)}`, say: '……まだ知らぬ道を。'},
+    ok: (c, v) => c.sum.newRoad >= v, prog: (c, v) => `${fmtM(Math.min(c.sum.newRoad, v))}／${fmtM(v)}`, say: '知らない道、歩いてみる？'},
   {id: 'long', app: 'walk', auto: 1, d: ALL, need: c => c.avg > 0,
     val: (c, d) => Math.ceil((c.avg + ({near: 300, walk: 500, far: 1000})[d]) / 100) * 100,
     t: v => `いつもより長く、${fmtM(v)} 歩く`, s: c => c.avg > 0 ? `最近2週間の1回の平均は ${fmtM(c.avg)}。1回の散歩で` : '1回の散歩で',
-    ok: (c, v) => c.maxWalk >= v, prog: (c, v) => c.maxWalk ? `今日いちばん長い散歩 ${fmtM(c.maxWalk)}` : '', say: '……少し、遠くまで。'},
+    ok: (c, v) => c.maxWalk >= v, prog: (c, v) => c.maxWalk ? `今日いちばん長い散歩 ${fmtM(c.maxWalk)}` : '', say: '今日は少し遠くまで？'},
   {id: 'stamp', app: 'walk', auto: 1, d: ['near', 'walk'], need: (c, d) => !!(c.mat && c.mat.poi && c.mat.poi[d] > 0),
     t: () => '神社・寺・公園に立ち寄る', s: (c, v, d) => c.mat && c.mat.poi ? `${DISTS[d].nm}の範囲に ${c.mat.poi[d]}か所あります。MichiMiru のスタンプ帳に入ります` : 'MichiMiru のスタンプ帳に入ります',
-    ok: c => c.stamp > 0, say: '……寄っていくか。'},
+    ok: c => c.stamp > 0, say: '寄り道、してみる？'},
   {id: 'spot', app: 'megu', auto: 1, d: ['walk', 'far'], need: (c, d) => !!(c.mat && c.mat.megu && c.mat.megu[d] && c.mat.megu[d].n > 0),
     t: () => 'MeguMiru のまだの場所を1つ訪ねる', s: (c, v, d) => { const m = c.mat && c.mat.megu && c.mat.megu[d]; return m && m.nm ? `いちばん近いのは「${m.nm}」（${fmtM(m.dd)}）` : 'ミュージアム・史跡・道の駅のうち、まだ行っていない所'; },
-    ok: c => c.megu.spot > 0, megu: 1, say: '……あそこは、まだだ。'},
+    ok: c => c.megu.spot > 0, megu: 1, say: 'まだの場所、行ってみる？'},
   {id: 'newplace', app: 'megu', auto: 1, d: ['far'],
     t: () => '初めての駅か市区町村へ行く', s: () => '初めての駅で降りるか、初めての市区町村を歩きます（MeguMiru に入ります）',
-    ok: c => c.megu.place > 0, megu: 1, say: '……知らぬ駅へ。'},
+    ok: c => c.megu.place > 0, megu: 1, say: '知らない駅、行ってみる？'},
   // ---- 自己申告 ----
-  {id: 'red3', app: 'walk', d: ALL, t: () => '赤いものを3つ見つける', s: () => '看板・花・郵便ポスト……。見つけたら［できた］', say: '……赤を、探せ。'},
-  {id: 'sky', app: 'sora', d: ALL, t: () => '立ち止まって、空を見上げる', s: () => '雲・鳥・飛行機。何が見えたか', say: '……上を、見ろ。', bee: 'lookup'},
-  {id: 'shop', app: 'walk', d: ALL, t: () => '入ったことのない店をのぞく', s: () => '入らなくても、のぞくだけでいい', say: '……のぞいてみるか。'},
-  {id: 'alley', app: 'walk', d: ALL, t: () => '知らない路地を1本歩く', s: () => 'いつもの道から、1本だけそれてみる', say: '……細い道が、ある。'},
-  {id: 'flower', app: 'walk', d: ALL, t: () => '季節の花を見つける', s: () => '庭先・道ばた・公園。いま咲いている花', say: '……花の、季節だ。'}
+  {id: 'red3', app: 'walk', d: ALL, t: () => '赤いものを3つ見つける', s: () => '看板・花・郵便ポスト……。見つけたら［できた］', say: '赤いもの、いくつあるかな。'},
+  {id: 'sky', app: 'sora', d: ALL, t: () => '立ち止まって、空を見上げる', s: () => '雲・鳥・飛行機。何が見えたか', say: '空、見上げてみない？', bee: 'lookup'},
+  {id: 'shop', app: 'walk', d: ALL, t: () => '入ったことのない店をのぞく', s: () => '入らなくても、のぞくだけでいい', say: '気になるお店、ある？'},
+  {id: 'alley', app: 'walk', d: ALL, t: () => '知らない路地を1本歩く', s: () => 'いつもの道から、1本だけそれてみる', say: '細い道、入ってみる？'},
+  {id: 'flower', app: 'walk', d: ALL, t: () => '季節の花を見つける', s: () => '庭先・道ばた・公園。いま咲いている花', say: 'どんな花が咲いてるかな。'}
 ];
 const TASK = Object.fromEntries(TASKS.map(t => [t.id, t]));
 const MK = {ctx: null, at: 0, busy: null};
@@ -58,12 +58,14 @@ async function mkCtx(force) {
   if (MK.busy) return MK.busy;
   MK.busy = (async () => {
     const now = Date.now(), d0 = dayStart(now);
-    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, mat: null, meguOn: false};
+    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, mat: null, meguOn: false,
+      raw: {walks: [], mlog: [], mrec: {}}};   // raw：ボタンの1行と「最近のみるとこ」に使う
     // 散歩のまとめ
     const db = await idbOpen('michimiru');
     if (db) {
       try {
         const ws = (await kvGet(db, 'walks')) || [], past = [];
+        c.raw.walks = Array.isArray(ws) ? ws : [];
         ws.forEach(w => {
           if (!w || !w.t0) return;
           if (w.t0 >= d0) { c.sum.newMesh += w.newMesh || 0; c.sum.newRoad += w.newRoad || 0; c.maxWalk = Math.max(c.maxWalk, w.dist || 0); c.walkToday = true; }
@@ -80,7 +82,7 @@ async function mkCtx(force) {
     if (mdb) {
       try {
         const log = (await kvGet(mdb, 'log')) || [], rec = (await kvGet(mdb, 'rec')) || {};
-        c.megu.ok = true;
+        c.megu.ok = true; c.raw.mlog = Array.isArray(log) ? log : []; c.raw.mrec = rec || {};
         const seen = new Set();
         log.forEach(e => {
           if (!e || e.t < d0 || (e.k !== 'new' && e.k !== 'up') || seen.has(e.id)) return;
@@ -171,7 +173,7 @@ function mkRender() {
   const el = $('mk'); if (!el) return;
   const k = dayKey(), rec = dayRec(k) || {q: {}, rr: {}}, dist = SET.dist, c = MK.ctx;
   const q = rec.q && rec.q[dist], t = q && TASK[q.id];
-  let h = `<div class="mkHd"><span class="mkT">🌿 きょうのみちくさ</span><div class="mkDist" role="group" aria-label="距離">` +
+  let h = `<div class="mkHd"><span class="mkT">🌿 ミルビーの きょうのみちくさ</span></div><div class="mkHd2"><div class="mkDist" role="group" aria-label="距離">` +
     DKEYS.map(d => `<button type="button" data-d="${d}" class="${d === dist ? 'on' : ''}" aria-pressed="${d === dist}">${DISTS[d].nm}</button>`).join('') + '</div></div>';
   if (!t || !c) { el.innerHTML = h + '<div class="mkBody"><div class="mkTx"><div class="mkS">お題を選んでいます…</div></div></div>'; mkWire(); return; }
   const a = APPS[t.app];

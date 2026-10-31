@@ -1,6 +1,8 @@
-// bee.js：ミルビー（右下の隅の顔・一言・ミルビーのページ・成長）
+// bee.js：ミルビー（みちくさのカードの右上の顔・一言・ミルビーのページ・成長）
+// ・版2：カードの右上の角からのぞく（前は右下の隅）。話し方はやさしい相棒（「……」と命令はやめた）
 // ・話すのは、アプリを開いたとき・みちくさを出すとき・達成したとき（ホームに戻ったとき）だけ。1回開くごとに一言まで
-// ・隅の顔は横向き。表情ごとに切り抜く枠（viewBox）をそろえてあるので、切り替えても頭が跳ねない
+// ・達成したときは達成の一言だけ。成長は赤い点で知らせ、ミルビーのページでお辞儀をして「ちょっと遠くまで来たね。」
+// ・顔は横向き。表情ごとに切り抜く枠（viewBox）をそろえてあるので、切り替えても頭が跳ねない
 // ・成長を進めるのは、みちくさを達成した回数だけ（1・5・15・30回で段階、30回から先は50・100回で背景が広がる）
 // ・連続日数には触れない。できなかった日も何も言わない
 const BEE_IMG = {front: 'img/bee_front.svg', side: 'img/bee_side.svg', joy: 'img/bee_joy.svg', surprised: 'img/bee_surprised.svg',
@@ -13,6 +15,7 @@ const SCENES = [[0, 'bg1', '湿地'], [5, 'bg2', '草原'], [30, 'bg3', '街'], 
 const stageOf = n => STAGES.reduce((a, s, i) => (n >= s[0] ? i : a), 0);
 const sceneOf = n => SCENES.reduce((a, s, i) => (n >= s[0] ? i : a), 0);
 const BEE = {opened: false, sayT: 0, imgT: 0};
+const NAVI = window.NAVI || (window.NAVI = {on: false});   // 使い方ナビ（navi.js）が出ている間は話さない
 const beeLs = () => Object.assign({stage: 0, scene: 0}, lsGet(K_BEE, {}));
 
 // 達成の記録から数え直す（控えを読み込んでも、取り消しても合う）
@@ -44,7 +47,7 @@ const pickBy = (arr, s) => arr[hash(s) % arr.length];
 function beeFace(k) { const im = $('beeImg'); if (im && im.dataset.k !== k) { im.dataset.k = k; im.src = beeCornerSrc(k); } }
 function beeCorner() {
   const b = $('bee'); if (!b) return;
-  b.classList.toggle('off', !SET.bee);
+  b.classList.toggle('off', !SET.bee); document.body.classList.toggle('nobee', !SET.bee);
   const ls = beeLs(), d = beeData();
   b.classList.toggle('new', stageOf(d.n) > (ls.stage || 0) || sceneOf(d.n) > (ls.scene || 0));
   if (!$('beeImg').dataset.k) beeFace(isNight() ? 'sleepy' : 'side');
@@ -74,10 +77,9 @@ function beeOnShow() {
     delete ls.react; lsSet(K_BEE, ls); BEE.opened = true;
     if (!SET.bee) return;
     const d = beeData();
-    if (r.up) { beeSay('……少し、遠くまで来た。', r.k === 'first' ? 'surprised' : 'joy', {shake: r.k === 'first', ms: 7000}); return; }
-    if (r.k === 'first') { beeSay((dayRec() || {}).done && dayRec().done.f ? '……！！ 初めてだ。' : '……見たか、今の。', 'surprised', {shake: true}); return; }
-    if (r.k === 'self') { beeSay('……うむ。', 'side'); return; }
-    beeSay(pickBy(['……！', '……悪くない。', '……やるな。'], dayKey() + d.n), 'joy');
+    if (r.k === 'first') { beeSay((dayRec() || {}).done && dayRec().done.f ? 'わっ、初めてだ！' : 'これは初めてだね！', 'surprised', {shake: true}); return; }
+    if (r.k === 'self') { beeSay('おつかれさま。', 'joy'); return; }
+    beeSay(pickBy(['やったね。', 'いいね！', 'おみごと！'], dayKey() + d.n), 'joy');
     return;
   }
   if (r && r.d !== dayKey()) { delete ls.react; lsSet(K_BEE, ls); }
@@ -94,7 +96,7 @@ function beeOnShow() {
   // 2回目からは短いあいさつ（久しぶりのときも責めない）
   const days = Object.keys(lsGet('walk_days_v1', {}) || {}).sort(), last = days[days.length - 1];
   const long = last && (new Date(k + 'T12:00:00') - new Date(last + 'T12:00:00')) / 864e5 >= 7;
-  beeSay(long ? '……来たか。' : pickBy(['……来たか。', '……風が、ある。', '……行くか。', '……どうだ。'], k + String(Date.now() / 3600000 | 0)), 'side');
+  beeSay(long ? 'ひさしぶり。待ってたよ。' : pickBy(['おかえり。', '今日はどこ行く？', 'いい一日になるといいね。', 'おかえり。何か見つけた？'], k + String(Date.now() / 3600000 | 0)), 'side');
 }
 
 // ---------- ミルビーのページ ----------
@@ -111,12 +113,12 @@ function beePageOpen() {
     : `<div class="no"><span class="e">${a.it}</span>？<br><span class="sub">${a.nm}のみちくさ</span></div>`).join('');
   shOpen('bee', 'ミルビー',
     `<div class="scene"><img class="bg" src="img/${SCENES[sc][1]}.svg" alt=""><img class="bd${!grew && st === 1 ? ' tilt' : ''}" id="bpArt" src="${BEE_IMG[art]}" alt="ミルビー">` +
-    (grew ? '<div class="say2" id="bpSay">……少し、遠くまで来た。</div>' : '') + '</div>' +
+    (grew ? '<div class="say2" id="bpSay">ちょっと遠くまで来たね。</div>' : '') + '</div>' +
     `<div class="stg"><b>${STAGES[st][1]}</b><span class="sub">${SCENES[sc][2]}・${next}</span></div>` +
     `<div class="stats"><div><b>${d.n}</b><small>これまでのみちくさ${fd ? `<br>初めての日 ${fd}` : ''}</small></div><div><b>${d.month}</b><small>今月のみちくさ</small></div></div>` +
     `<div class="box"><h3>持ち物</h3><div class="sub">それぞれのミルのみちくさを初めて達成すると、ミルビーが持ち物をもらいます</div><div class="shelf">${shelf}</div></div>` +
     `<div class="box"><h3>🏅 Miru バッジ ${badges}／10</h3><div class="sub">MichiMiru の散歩日記の、いちばん下にあります</div><button class="lnk" type="button" id="bpNikki" style="margin-top:6px">散歩日記を見る</button></div>` +
-    '<div class="box">' + swHtml('bpOff', 'ミルビーを出さない', 'ホームの右下のミルビーを隠します', !SET.bee) + '</div>',
+    '<div class="box">' + swHtml('bpOff', 'ミルビーを出さない', 'みちくさのカードの横のミルビーを隠します', !SET.bee) + '</div>',
     () => {
       $('bpNikki').onclick = () => { shClose(false); setTimeout(() => tkGo('walk', 'nikki'), 50); };
       $('bpOff').onchange = e => { SET.bee = !e.target.checked; saveSet(); beeCorner(); };
