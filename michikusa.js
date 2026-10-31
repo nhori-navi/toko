@@ -1,4 +1,5 @@
-// michikusa.js：きょうのみちくさ（お題を選ぶ・達成の判定・カード）
+// michikusa.js：きょうのみちくさ（お題を選ぶ・達成の判定・カード）とミルビーの成長の数え方
+// 版3：ミルビーのページ（toko/）と、HP の TOP（アプリの中で開いたとき）の両方で読む
 // ・1日1枚。毎朝4時に入れ替わる。距離は 近所／散歩／遠出（カードの上の札で切り替え。最後に選んだ距離を次の日も使う）
 // ・お題は、その日に初めてその距離を出したときに選んで保存する（あとで材料が変わっても、その日のお題は変わらない）
 // ・自動判定のお題と自己申告のお題をおおよそ 7対3。近くにできるものがないお題は出さない。位置が分からないときは自己申告だけ
@@ -38,6 +39,39 @@ const TASKS = [
 ];
 const TASK = Object.fromEntries(TASKS.map(t => [t.id, t]));
 const MK = {ctx: null, at: 0, busy: null};
+// 画面ごとの知らせ先（ミルビーのページ・TOP がそれぞれ決める）。ev：reroll・done・undo・dist
+const tkHook = ev => { try { if (typeof window.tkOnChange === 'function') window.tkOnChange(ev); } catch (e) {} };
+
+// ---------- ミルビーの成長（達成の記録から数える。画面のないところ〔TOP〕でも使う） ----------
+// 成長を進めるのは、みちくさを達成した回数だけ（1・5・15・30回で段階、30回から先は50・100回で背景が広がる）
+const STAGES = [[0, 'じっと立つ', 'front'], [1, '首をかしげる', 'side'], [5, '一歩踏み出す', 'joy'], [15, '見上げる・見渡す', 'lookup'], [30, '旅に出る', 'side']];
+const SCENES = [[0, 'bg1', '湿地'], [5, 'bg2', '草原'], [30, 'bg3', '街'], [50, 'bg4', '山'], [100, 'bg5', '空']];
+const stageOf = n => STAGES.reduce((a, s, i) => (n >= s[0] ? i : a), 0);
+const sceneOf = n => SCENES.reduce((a, s, i) => (n >= s[0] ? i : a), 0);
+const beeLs = () => Object.assign({stage: 0, scene: 0}, lsGet(K_BEE, {}));
+function beeData() {
+  const a = daysAll(), out = {n: 0, first: '', items: {}, kinds: {}, month: 0};
+  const mon = dayKey().slice(0, 7);
+  Object.keys(a).sort().forEach(k => {
+    const d = a[k] && a[k].done; if (!d || !TASK[d.id]) return;
+    out.n++; if (!out.first) out.first = k;
+    const app = TASK[d.id].app;
+    if (!out.items[app]) out.items[app] = k;
+    if (!out.kinds[d.id]) out.kinds[d.id] = k;
+    if (k.slice(0, 7) === mon) out.month++;
+  });
+  return out;
+}
+function beeSync() {
+  const d = beeData(), b = beeLs();
+  Object.assign(b, {n: d.n, first: d.first, items: d.items, kinds: d.kinds});
+  lsSet(K_BEE, b);
+  return d;
+}
+function beeReact(r) { const b = beeLs(); b.react = r; lsSet(K_BEE, b); }
+function beeUnreact(k) { const b = beeLs(); if (b.react && b.react.d === k) { delete b.react; lsSet(K_BEE, b); } }
+// ミルビーに話したいことがあるか（TOP の入口に印を出す）：今日の反応がまだ、または成長をまだ見せていない
+function beeNews() { const d = beeData(), ls = beeLs(); return !!((ls.react && ls.react.d === dayKey()) || stageOf(d.n) > (ls.stage || 0) || sceneOf(d.n) > (ls.scene || 0)); }
 
 const daysAll = () => lsGet(K_DAYS, {}) || {};
 const dayRec = (k = dayKey()) => daysAll()[k] || null;
@@ -129,7 +163,7 @@ function mkReroll() {
   if (!rec || rec.done || (rec.rr && rec.rr[dist])) return;
   rec.rr = rec.rr || {}; rec.rr[dist] = 1;
   rec.q[dist] = mkPick(k, dist, 1, c, rec.q[dist] && rec.q[dist].id);
-  daySave(k, rec); mkRender(); beeSayTask();
+  daySave(k, rec); mkRender(); tkHook('reroll');
 }
 
 // ---------- 判定 ----------
@@ -165,7 +199,7 @@ function mkUndo() {
   if (!rec || !rec.done || !rec.done.self) return;
   delete rec.done; daySave(k, rec);
   beeSync(); beeUnreact(k);
-  mkRender(); appsRender(); beeCorner();
+  mkRender(); tkHook('undo');
 }
 
 // ---------- カード ----------
@@ -173,7 +207,7 @@ function mkRender() {
   const el = $('mk'); if (!el) return;
   const k = dayKey(), rec = dayRec(k) || {q: {}, rr: {}}, dist = SET.dist, c = MK.ctx;
   const q = rec.q && rec.q[dist], t = q && TASK[q.id];
-  let h = `<div class="mkHd"><span class="mkT">🌿 ミルビーの きょうのみちくさ</span></div><div class="mkHd2"><div class="mkDist" role="group" aria-label="距離">` +
+  let h = `<div class="mkHd"><span class="mkT">🌿 きょうのみちくさ</span></div><div class="mkHd2"><div class="mkDist" role="group" aria-label="距離">` +
     DKEYS.map(d => `<button type="button" data-d="${d}" class="${d === dist ? 'on' : ''}" aria-pressed="${d === dist}">${DISTS[d].nm}</button>`).join('') + '</div></div>';
   if (!t || !c) { el.innerHTML = h + '<div class="mkBody"><div class="mkTx"><div class="mkS">お題を選んでいます…</div></div></div>'; mkWire(); return; }
   const a = APPS[t.app];
@@ -198,7 +232,7 @@ function mkWire() {
   const ap = el.querySelector('.mkApp'); if (ap) ap.onclick = () => tkGo(ap.dataset.app);
   const ok = $('mkOk'); if (ok) ok.onclick = () => {
     const k = dayKey(), rec = dayRec(k), q = rec && rec.q[SET.dist]; if (!q || rec.done) return;
-    mkDone(k, rec, SET.dist, q, true); mkRender(); appsRender(); beeOnShow();
+    mkDone(k, rec, SET.dist, q, true); mkRender(); tkHook('done');
   };
   const un = $('mkUndo'); if (un) un.onclick = mkUndo;
   const rr = $('mkRr'); if (rr) rr.onclick = mkReroll;
@@ -207,12 +241,12 @@ async function mkSetDist(d) {
   if (!DISTS[d] || d === SET.dist) return;
   SET.dist = d; saveSet();
   const c = MK.ctx || await mkCtx(false);
-  mkEnsure(d, c); mkRender();
+  mkEnsure(d, c); mkRender(); tkHook('dist');
 }
 // ホームが見えたとき：材料を読み直して、お題を用意して、判定して、描く
 async function mkRefresh(force) {
   const c = await mkCtx(force);
   mkEnsure(SET.dist, c);
   await mkJudge('show', c);
-  mkRender(); appsRender();
+  mkRender();
 }
