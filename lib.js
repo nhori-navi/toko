@@ -4,7 +4,7 @@
 // ・Chrome で単独で開いたときは、普通のリンクで移る
 // ・同じアドレス（nhori-navi.github.io）の下にあるので、4つのミルの保存を直接読める（書くのは toko_ で始まるものだけ）
 // 読み込み順：lib.js → michikusa.js → bee.js（ミルビーのページ）／kyou.js（TOP）
-var TOKO_V = 4; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
+var TOKO_V = 5; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
 const TOKO_BASE = (() => { try { return new URL('.', document.currentScript.src).href; } catch (e) { return '/toko/'; } })(); // toko フォルダーの場所（TOP から読んでも合うように）
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -48,6 +48,16 @@ const kvGet = (db, k) => new Promise(res => { try { const q = db.transaction('kv
 // MichiMiru の画面より先に読み込まれることがある。?inapp=1 で中と分かり、呼ぶときに MichiMiru の準備を確かめる
 const IN_WALK = (() => { try { return window.parent !== window && (/[?&]inapp=1/.test(location.search) || typeof parent.tokoGo === 'function'); } catch (e) { return false; } })();
 const P = () => { try { return IN_WALK && typeof parent.tokoGo === 'function' ? parent : null; } catch (e) { return null; } };
+// 版5：ホーム画面のアイコンから開いた HP（Web 版のミルトコ）。この窓の中では sessionStorage の toko_web で覚える
+//   → 4つのミルは「◀ TOP」を出す（MichiMiru 版43・MeguMiru 版22・TenMiru v45・YamaMiru 版17）
+const IN_WEBAPP = (() => {
+  if (IN_WALK) return false;
+  try {
+    const sa = /[?&]home=1/.test(location.search) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true || sessionStorage.getItem('toko_web') === '1';
+    if (sa) sessionStorage.setItem('toko_web', '1');
+    return !!sa;
+  } catch (e) { return false; }
+})();
 
 // ---------- 4つのミル ----------
 const SITE_ROOT = new URL('../', TOKO_BASE).href;   // https://nhori-navi.github.io/
@@ -61,7 +71,7 @@ function tkGo(id, sub, tries) {
   const p = P();
   if (p) { try { p.tokoGo(id, sub); return; } catch (e) {} }
   if (IN_WALK) { if ((tries || 0) < 40) setTimeout(() => tkGo(id, sub, (tries || 0) + 1), 250); return; }   // MichiMiru の準備がまだ
-  location.href = id === 'bee' ? TOKO_BASE : id === 'top' ? SITE_ROOT : APPS[id].url;
+  location.href = id === 'bee' ? TOKO_BASE : id === 'top' ? SITE_ROOT + (IN_WEBAPP ? '?home=1' : '') : APPS[id].url;
 }
 
 // ---------- そのミルの今（ボタンの1行） ----------

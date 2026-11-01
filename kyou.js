@@ -4,7 +4,8 @@
 //   → 最近のみるとこ → ミルトコの設定 → 紹介の段（「ミルトコについて」にたたむ）
 //   MichiMiru から呼ばれる：tokoShow（TOP が見えたとき）・tokoJudge（散歩を終えたとき）・tokoReload（控えを読み込んだあと）
 // ・版4：アプリを初めて開いたときは、TOP の上でミルビーが自己紹介（「なんでハシビロコウ？」。1回だけ。toko_bee_v1.intro）
-// ・Chrome で開いたとき（Web）は何もしない（ミルビーの紹介の段は、版4 から HP の index.html に直接書いた）
+// ・版5：ホーム画面のアイコンから開いたとき（Web 版のミルトコ。IN_WEBAPP）も、アプリと同じ毎日使う形。ボタンは普通に移る
+// ・ブラウザで開いたとき（Web）は何もしない（ミルビーの紹介の段は、版4 から HP の index.html に直接書いた）
 const BEE_FACE = TOKO_BASE + 'img/bee_side.svg#svgView(viewBox(33.4,29,367.5,367.5))';
 const KY = {ctx: null};
 const HERO_GO = {michi: 'walk', megu: 'megu', ten: 'sora', yama: 'yama'};
@@ -106,10 +107,10 @@ function kyRec() {
 function kySet() {
   const el = $('tkSetIn'); if (!el || !$('tkSet').open) return;
   const p = P(); let st = null; try { st = p && p.tokoState(); } catch (e) {}
-  el.innerHTML = swHtml('tkResume', '前回のアプリから始める', 'ミルトコを開いたとき、前に使っていたアプリから始めます', SET.resume) +
+  el.innerHTML = (IN_WALK ? swHtml('tkResume', '前回のアプリから始める', 'ミルトコを開いたとき、前に使っていたアプリから始めます', SET.resume) : '<div class="sub" style="padding-top:4px">Web 版（ホーム画面から開いたとき）です。iPhone では、画面を消すと MichiMiru の記録が止まります。</div>') +
     (st && st.trial ? '<div class="sub">いまは MichiMiru の「ミルトコのホーム（ためし）」で開いています。</div><button class="lnk" type="button" id="tkOff">ためしをやめて MichiMiru に戻る</button>' : '') +
     `<div class="sub">ミルトコ 版${TOKO_V}${st && st.ver ? `・MichiMiru 版${st.ver}` : ''}。暗い画面はスマホの設定に合わせます</div>`;
-  $('tkResume').onchange = e => { SET.resume = e.target.checked; saveSet(); };
+  const rs = $('tkResume'); if (rs) rs.onchange = e => { SET.resume = e.target.checked; saveSet(); };
   const o = $('tkOff'); if (o) o.onclick = () => { try { P().tokoOff(); } catch (e) {} };
 }
 // ---------- 初めて開いたときのミルビーの自己紹介（1回だけ） ----------
@@ -161,4 +162,11 @@ window.tokoReload = function () { Object.assign(SET, {dist: 'walk', resume: fals
 window.tkOnChange = () => kyRender();
 
 kyStyle();
-if (IN_WALK) { kyBuild(); window.tokoShow(); setTimeout(() => { if (!beeLs().intro) kyHello(); }, 700); }
+if (IN_WALK || IN_WEBAPP) {
+  kyBuild(); window.tokoShow(); setTimeout(() => { if (!beeLs().intro) kyHello(); }, 700);
+  // Web 版：ほかのミルから戻ってきたとき（ページが残っていたとき）・画面に戻ったときに描き直す
+  if (IN_WEBAPP) {
+    window.addEventListener('pageshow', e => { if (e.persisted) window.tokoShow(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') window.tokoShow(); });
+  }
+}
