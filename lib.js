@@ -1,10 +1,10 @@
-// lib.js：ミルトコの共通の部品（版3）。ミルビーのページ（toko/index.html）と、HP の TOP（アプリの中で開いたとき）の両方で読む
+// lib.js：ミルトコの共通の部品（版3〜）。ミルビーのページ（toko/index.html）と、HP の TOP（アプリの中で開いたとき）の両方で読む
 // ・Google Play 版（ミルトコ）では、MichiMiru（walk）のページの上に HP の TOP を iframe でかぶせる（walk の mirutoko.js）
 //   → ボタンを押すと parent.tokoGo('walk'|'megu'|'sora'|'yama'|'bee')。歩くは TOP が下がり、ほかは MichiMiru の「重ねて開く」で開く（bee＝ミルビーのページ）
 // ・Chrome で単独で開いたときは、普通のリンクで移る
 // ・同じアドレス（nhori-navi.github.io）の下にあるので、4つのミルの保存を直接読める（書くのは toko_ で始まるものだけ）
 // 読み込み順：lib.js → michikusa.js → bee.js（ミルビーのページ）／kyou.js（TOP）
-var TOKO_V = 3; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
+var TOKO_V = 4; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
 const TOKO_BASE = (() => { try { return new URL('.', document.currentScript.src).href; } catch (e) { return '/toko/'; } })(); // toko フォルダーの場所（TOP から読んでも合うように）
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));

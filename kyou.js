@@ -3,7 +3,8 @@
 //   はじめの絵（少し低く。絵の中の道・ピン・飛行機・山の名前を押すとそのミル）→ ミルビーの入口（きょうのお題）→ 4つのミル（そのミルの今を1行）
 //   → 最近のみるとこ → ミルトコの設定 → 紹介の段（「ミルトコについて」にたたむ）
 //   MichiMiru から呼ばれる：tokoShow（TOP が見えたとき）・tokoJudge（散歩を終えたとき）・tokoReload（控えを読み込んだあと）
-// ・Chrome で開いたとき（Web）は今の TOP のまま。「4つのアプリ」の段の次に、ミルビーの紹介の段を1つ足すだけ
+// ・版4：アプリを初めて開いたときは、TOP の上でミルビーが自己紹介（「なんでハシビロコウ？」。1回だけ。toko_bee_v1.intro）
+// ・Chrome で開いたとき（Web）は何もしない（ミルビーの紹介の段は、版4 から HP の index.html に直接書いた）
 const BEE_FACE = TOKO_BASE + 'img/bee_side.svg#svgView(viewBox(33.4,29,367.5,367.5))';
 const KY = {ctx: null};
 const HERO_GO = {michi: 'walk', megu: 'megu', ten: 'sora', yama: 'yama'};
@@ -34,8 +35,15 @@ function kyStyle() {
     '.tsw input::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}.tsw input:checked{background:#3f6e74}.tsw input:checked::after{left:25px}' +
     '.tkSet .lnk{border:1px solid #3f6e74;background:transparent;color:inherit;border-radius:12px;padding:6px 12px;min-height:38px;font:inherit;font-size:14px;margin:4px 0 8px}.tkSet .sub{font-size:12px;color:var(--sub);padding-bottom:10px}' +
     '@media (prefers-color-scheme: dark){.tkBee{background:#2a3230;border-color:#4d5a4f}.tkBee .tx b{color:#9cc7c6}.tkBee .st.ok{color:#8fd4a8}.tkBee .dot{box-shadow:0 0 0 2px #2a3230}}' +
-    // Web：ミルビーの紹介の段
-    '.tkWeb{display:grid;gap:14px;align-items:center}.tkWeb img{height:min(240px,36vh);width:auto;justify-self:center}@media (min-width:760px){.tkWeb{grid-template-columns:240px 1fr}}';
+    // 初めて開いたときのミルビーの自己紹介
+    '#tkHello{position:fixed;inset:0;z-index:50;background:rgba(10,20,20,.6);display:none}#tkHello.on{display:block}' +
+    '#tkHello .hb{position:absolute;right:max(10px,4vw);bottom:max(14px,env(safe-area-inset-bottom));height:min(44vh,360px);max-width:46vw;object-fit:contain;object-position:right bottom;cursor:pointer}' +
+    '#tkHello .hs{position:absolute;left:14px;right:14px;bottom:calc(min(44vh,360px) + 14px);max-width:520px;margin-left:auto;background:#fffdf4;color:#1f2b2a;border:2px solid #d9cfae;border-radius:16px;padding:12px 14px;font-size:17px;line-height:1.55;box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer}' +
+    '#tkHello .hs::after{content:"";position:absolute;right:min(18vw,90px);bottom:-18px;border:9px solid transparent;border-top-color:#d9cfae}' +
+    '#tkHello .hs .nx{display:block;text-align:right;font-size:12px;color:#5f6d6a;margin-top:4px}' +
+    '#tkHello .hk{position:absolute;right:14px;top:max(14px,env(safe-area-inset-top));border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.18);color:#fff;border-radius:999px;padding:6px 16px;font:inherit;font-size:14px;min-height:38px}' +
+    '#tkHello .dots{position:absolute;left:16px;bottom:calc(min(44vh,360px) - 8px);display:flex;gap:6px}#tkHello .dots i{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.45)}#tkHello .dots i.on{background:#fff}' +
+    '@keyframes tkGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,196,64,0)}50%{box-shadow:0 0 0 6px rgba(255,196,64,.7)}}.tkBee.glow{animation:tkGlow 1s ease-in-out 3}';
   document.head.appendChild(st);
 }
 
@@ -104,6 +112,41 @@ function kySet() {
   $('tkResume').onchange = e => { SET.resume = e.target.checked; saveSet(); };
   const o = $('tkOff'); if (o) o.onclick = () => { try { P().tokoOff(); } catch (e) {} };
 }
+// ---------- 初めて開いたときのミルビーの自己紹介（1回だけ） ----------
+const HELLO = [['はじめまして。ハシビロコウのミルビーです。', 'front'], ['なんでハシビロコウなんだ？って思ったでしょ。', 'side'],
+  ['……作った人が、アンバランスな感じが好きなんだって。', 'front'], ['ほんとは、何時間でも動かないで立ってる鳥なんだけどね。', 'lookup'],
+  ['ここでは毎朝ひとつ、「みちくさ」のお題を出すよ。', 'side'], ['お題は、このカードから見てね。', 'joy']];
+const HL = {i: 0, on: false};
+function kyHello() {
+  if (HL.on) return;
+  let el = $('tkHello');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'tkHello'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'ミルビーの自己紹介');
+    el.innerHTML = '<button class="hk" type="button" id="hlSkip">飛ばす</button><div class="dots" id="hlDots"></div><div class="hs" id="hlSay"></div><img class="hb" id="hlImg" alt="ミルビー">';
+    document.body.appendChild(el);
+    $('hlSkip').onclick = e => { e.stopPropagation(); kyHelloEnd(false); };
+    el.addEventListener('click', () => { if (HL.i >= HELLO.length - 1) kyHelloEnd(false); else kyHelloShow(HL.i + 1); });
+  }
+  HL.on = true; el.classList.add('on');
+  try { history.pushState({tkHello: 1}, ''); } catch (e) {}
+  kyHelloShow(0);
+}
+function kyHelloShow(i) {
+  HL.i = i;
+  const [t, f] = HELLO[i];
+  $('hlSay').innerHTML = esc(t) + `<span class="nx">${i === HELLO.length - 1 ? 'はじめる ▶' : '▶'}</span>`;
+  $('hlImg').src = TOKO_BASE + 'img/bee_' + f + '.svg';
+  $('hlDots').innerHTML = HELLO.map((x, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+}
+function kyHelloEnd(fromPop) {
+  if (!HL.on) return;
+  HL.on = false; $('tkHello').classList.remove('on');
+  const l = beeLs(); l.intro = 1; lsSet(K_BEE, l);   // ミルビーのページの自己紹介も、もう出さない
+  if (!fromPop && history.state && history.state.tkHello) { try { history.back(); } catch (e) {} }
+  const b = $('tkBee'); if (b) { b.scrollIntoView({block: 'center', behavior: 'smooth'}); b.classList.remove('glow'); void b.offsetWidth; b.classList.add('glow'); setTimeout(() => b.classList.remove('glow'), 3200); }
+}
+window.addEventListener('popstate', () => { if (HL.on && !(history.state && history.state.tkHello)) kyHelloEnd(true); });
+
 // MichiMiru から呼ばれるもの
 window.tokoShow = async function () {
   try { KY.ctx = await mkCtx(true); await mkRefresh(false); KY.ctx = MK.ctx; } catch (e) {}
@@ -117,17 +160,5 @@ window.tokoJudge = async function (reason) {
 window.tokoReload = function () { Object.assign(SET, {dist: 'walk', resume: false}, lsGet(K_SET, {})); beeSync(); kyRender(); };
 window.tkOnChange = () => kyRender();
 
-// ---------- Web の TOP：ミルビーの紹介の段 ----------
-function kyWeb() {
-  const apps = $('apps'); if (!apps) return;
-  const s = document.createElement('section'); s.className = 'sec reveal'; s.id = 'mirubee';
-  s.innerHTML = '<p class="kicker">ミルビー</p><h2 class="sec-title">毎朝ひとつ、寄り道のお題。</h2>' +
-    `<div class="tkWeb"><img src="${TOKO_BASE}img/bee_front.svg" alt="ミルビー（ハシビロコウ）"><div>` +
-    '<p class="voice">はじめまして。ハシビロコウのミルビーです。</p>' +
-    '<p class="f-text">毎朝4時に「みちくさ」のお題をひとつ出します。「知らない路地を1本歩く」「空を見上げる」「新しいマスを塗る」……。歩けば自動で判定するものと、できたら自分で押すものがあります。できた回数で、ミルビーは少しずつ遠くへ出かけます。</p>' +
-    `<div class="btns"><a class="btn main" href="${TOKO_BASE}" style="--app:#2f4c53">ミルビーのページを開く</a></div></div></div>`;
-  apps.after(s);
-}
-
 kyStyle();
-if (IN_WALK) { kyBuild(); window.tokoShow(); } else kyWeb();
+if (IN_WALK) { kyBuild(); window.tokoShow(); setTimeout(() => { if (!beeLs().intro) kyHello(); }, 700); }

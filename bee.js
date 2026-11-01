@@ -2,14 +2,17 @@
 // ・ミルトコ（アプリ）では HP の TOP の上に重ねて開く（MichiMiru の「重ねて開く」。上の緑の帯で TOP に戻る）。Chrome では普通のページ
 // ・上にミルビーの景色（今の段階の絵と背景）、その下にきょうのみちくさのカード、これまでの回数・持ち物・Miru バッジ
 // ・ミルビーが話すのはこのページの中だけ。話し方はやさしい相棒（「……」と命令はなし）
-//   初めて開いたとき：自己紹介（3つの吹き出し。押すと次へ）／達成のあと：達成の一言（初めては驚いて揺れる）／
+//   初めて開いたとき：自己紹介（6つの吹き出し。押すと次へ。アプリでは TOP で済ませる）／達成のあと：達成の一言（初めては驚いて揺れる）／
 //   成長したとき：お辞儀して「ちょっと遠くまで来たね。」／その日に初めて開いたとき：お題の一言／2回目から：あいさつ／夜22時〜朝4時：眠い顔で、あいさつはしない
 const BEE_IMG = {front: 'img/bee_front.svg', side: 'img/bee_side.svg', joy: 'img/bee_joy.svg', surprised: 'img/bee_surprised.svg',
   lookup: 'img/bee_lookup.svg', sleepy: 'img/bee_sleepy.svg', bow: 'img/bee_bow.svg'};
 const BEE = {sayT: 0, q: [], busy: false};
 const isNight = (t = Date.now()) => { const h = new Date(t).getHours(); return h >= 22 || h < 4; };
 const pickBy = (arr, s) => arr[hash(s) % arr.length];
-const INTRO = [['はじめまして。ハシビロコウのミルビーです。', 'front'], ['毎朝ひとつ、「みちくさ」を出すね。', 'side'], ['できたら、ここで教えてね。', 'joy']];
+// 自己紹介（アプリでは TOP で先に済ませるので、ここで出るのは Web で初めて開いたときなど）
+const INTRO = [['はじめまして。ハシビロコウのミルビーです。', 'front'], ['なんでハシビロコウなんだ？って思ったでしょ。', 'side'],
+  ['……作った人が、アンバランスな感じが好きなんだって。', 'front'], ['ほんとは、何時間でも動かないで立ってる鳥なんだけどね。', 'lookup'],
+  ['ここでは毎朝ひとつ、「みちくさ」のお題を出すよ。', 'side'], ['できたら、ここで教えてね。', 'joy']];
 
 // ---------- 景色 ----------
 function stageArt() { const st = Math.min(stageOf(beeData().n), beeLs().stage || 0); return isNight() ? 'sleepy' : STAGES[st][2]; }
