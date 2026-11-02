@@ -6,6 +6,7 @@
 // ・版4：アプリを初めて開いたときは、TOP の上でミルビーが自己紹介（「なんでハシビロコウ？」。1回だけ。toko_bee_v1.intro）
 // ・版5：ホーム画面のアイコンから開いたとき（Web 版のミルトコ。IN_WEBAPP）も、アプリと同じ毎日使う形。ボタンは普通に移る
 // ・ブラウザで開いたとき（Web）は何もしない（ミルビーの紹介の段は、版4 から HP の index.html に直接書いた）
+// ・版6：ミルビーの入口に、自己申告のお題のときだけ［できた］（押すと記録してミルビーのページへ。反応はそこで）。自己紹介の6を「まずは『歩く』」に
 const BEE_FACE = TOKO_BASE + 'img/bee_side.svg#svgView(viewBox(33.4,29,367.5,367.5))';
 const KY = {ctx: null};
 const HERO_GO = {michi: 'walk', megu: 'megu', ten: 'sora', yama: 'yama'};
@@ -18,7 +19,9 @@ function kyStyle() {
     
     'html.toko-app main.top-main>.tkAbout{margin:24px 0 8px}' +
     '#tkApp{padding-top:14px;padding-bottom:4px}' +
-    '.tkBee{display:flex;align-items:center;gap:10px;width:100%;border:2px solid #d9cfae;background:#fbf8ee;border-radius:18px;padding:6px 12px 6px 6px;text-align:left;color:var(--text);position:relative;min-height:76px;cursor:pointer;font:inherit}' +
+    '.tkBee{display:flex;align-items:center;gap:6px;width:100%;border:2px solid #d9cfae;background:#fbf8ee;border-radius:18px;padding:6px 8px 6px 6px;text-align:left;color:var(--text);position:relative;min-height:76px}' +
+    '.tkBee .bm{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:transparent;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;min-height:64px}' +
+    '.tkBee .bok{flex:none;border:1px solid #3f6e74;background:#2f4c53;color:#fff;border-radius:12px;padding:8px 12px;min-height:42px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}' +
     '.tkBee img{width:64px;height:64px;flex:none}.tkBee .tx{flex:1;min-width:0;line-height:1.45}.tkBee .tx b{display:block;font-size:13px;color:#2f4c53}.tkBee .tx span{display:block;font-size:16px;font-weight:700}' +
     '.tkBee .st{flex:none;font-size:13px;color:var(--sub)}.tkBee .st.ok{color:#2e7d4f;font-weight:700}.tkBee .dot{position:absolute;left:56px;top:8px;width:12px;height:12px;border-radius:6px;background:#e0533d;box-shadow:0 0 0 2px #fbf8ee}' +
     '.tkApps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:12px}' +
@@ -35,7 +38,7 @@ function kyStyle() {
     '.tsw input{appearance:none;-webkit-appearance:none;flex:0 0 52px;width:52px;height:30px;margin:0;border-radius:15px;background:#c9d3cd;position:relative;transition:background .15s;cursor:pointer}' +
     '.tsw input::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}.tsw input:checked{background:#3f6e74}.tsw input:checked::after{left:25px}' +
     '.tkSet .lnk{border:1px solid #3f6e74;background:transparent;color:inherit;border-radius:12px;padding:6px 12px;min-height:38px;font:inherit;font-size:14px;margin:4px 0 8px}.tkSet .sub{font-size:12px;color:var(--sub);padding-bottom:10px}' +
-    '@media (prefers-color-scheme: dark){.tkBee{background:#2a3230;border-color:#4d5a4f}.tkBee .tx b{color:#9cc7c6}.tkBee .st.ok{color:#8fd4a8}.tkBee .dot{box-shadow:0 0 0 2px #2a3230}}' +
+    '@media (prefers-color-scheme: dark){.tkBee{background:#2a3230;border-color:#4d5a4f}.tkBee .tx b{color:#9cc7c6}.tkBee .st.ok{color:#8fd4a8}.tkBee .dot{box-shadow:0 0 0 2px #2a3230}.tkBee .bok{background:#7fb0b0;color:#14201f;border-color:#7fb0b0}}' +
     // 初めて開いたときのミルビーの自己紹介
     '#tkHello{position:fixed;inset:0;z-index:50;background:rgba(10,20,20,.6);display:none}#tkHello.on{display:block}' +
     '#tkHello .hb{position:absolute;right:max(10px,4vw);bottom:max(14px,env(safe-area-inset-bottom));height:min(44vh,360px);max-width:46vw;object-fit:contain;object-position:right bottom;cursor:pointer}' +
@@ -53,7 +56,7 @@ function kyBuild() {
   document.documentElement.classList.add('toko-app');
   const hero = $('hero'); if (!hero) return;
   const sec = document.createElement('section'); sec.id = 'tkApp'; sec.className = 'wrap';
-  sec.innerHTML = '<button class="tkBee" type="button" id="tkBee"></button><div class="tkApps" id="tkApps"></div><button class="tkRec" type="button" id="tkRec"></button>' +
+  sec.innerHTML = '<div class="tkBee" id="tkBee"></div><div class="tkApps" id="tkApps"></div><button class="tkRec" type="button" id="tkRec"></button>' +
     '<div class="tkRecent" id="tkRecent"></div><details class="tkSet" id="tkSet"><summary>⚙ ミルトコの設定</summary><div id="tkSetIn"></div></details>';
   hero.after(sec);
   // 紹介の段は「ミルトコについて」にたたむ（毎日見るには長いので）
@@ -69,7 +72,10 @@ function kyBuild() {
     const h = e.target.closest && e.target.closest('.hot'); if (!h || !HERO_GO[h.dataset.go]) return;
     e.stopPropagation(); e.preventDefault(); tkGo(HERO_GO[h.dataset.go]);
   }, true);
-  $('tkBee').onclick = () => tkGo('bee');
+  $('tkBee').addEventListener('click', e => {
+    if (e.target.closest('.bok')) { if (mkSelfDone()) tkGo('bee'); return; }   // 版6：［できた］→ 記録してミルビーのページへ（反応はそこで）
+    tkGo('bee');
+  });
   $('tkApps').addEventListener('click', e => { const b = e.target.closest('[data-app]'); if (b) tkGo(b.dataset.app); });
   $('tkRecent').addEventListener('click', e => { const b = e.target.closest('[data-app]'); if (b) tkGo(b.dataset.app); });
   $('tkRec').onclick = () => tkGo('walk');
@@ -84,8 +90,9 @@ function kyRender() {
   // ミルビーの入口
   const rec = dayRec(), q = rec && rec.q && rec.q[SET.dist], t = q && TASK[q.id], done = rec && rec.done;
   const title = done && TASK[done.id] ? TASK[done.id].t(done.v) : t ? t.t(q.v) : '毎朝ひとつ、寄り道のお題';
-  $('tkBee').innerHTML = `<img src="${BEE_FACE}" alt=""><span class="tx"><b>🐦 ミルビーのみちくさ</b><span>${esc(title)}</span></span>` +
-    `<span class="st${done ? ' ok' : ''}">${done ? '✓ 達成' : '›'}</span>` + (beeNews() ? '<span class="dot"></span>' : '');
+  const selfOk = !done && t && !t.auto;   // 版6：自己申告のお題のときだけ［できた］
+  $('tkBee').innerHTML = `<button class="bm" type="button" aria-label="ミルビーのページを開く"><img src="${BEE_FACE}" alt=""><span class="tx"><b>🐦 ミルビーのみちくさ</b><span>${esc(title)}</span></span>` +
+    `<span class="st${done ? ' ok' : ''}">${done ? '✓ 達成' : selfOk ? '' : '›'}</span></button>` + (selfOk ? '<button class="bok" type="button">できた</button>' : '') + (beeNews() ? '<span class="dot"></span>' : '');
   // 4つのミル
   $('tkApps').innerHTML = Object.entries(APPS).map(([k, a]) =>
     `<button class="tkApp ${a.cls}" type="button" data-app="${k}" title="${a.ap}"><img src="${a.img}" alt="" onerror="this.style.visibility='hidden'"><span class="tx"><b>${a.nm}</b><small>${esc(info[k] || a.d0)}</small></span>` +
@@ -116,7 +123,7 @@ function kySet() {
 // ---------- 初めて開いたときのミルビーの自己紹介（1回だけ） ----------
 const HELLO = [['はじめまして。ハシビロコウのミルビーです。', 'front'], ['なんでハシビロコウなんだ？って思ったでしょ。', 'side'],
   ['……作った人が、アンバランスな感じが好きなんだって。', 'front'], ['ほんとは、何時間でも動かないで立ってる鳥なんだけどね。', 'lookup'],
-  ['ここでは毎朝ひとつ、「みちくさ」のお題を出すよ。', 'side'], ['お題は、このカードから見てね。', 'joy']];
+  ['ここでは毎朝ひとつ、「みちくさ」のお題を出すよ。', 'side'], ['お題は、このカードから。まずは『歩く』を開いて、一度歩いてみて。', 'joy']];
 const HL = {i: 0, on: false};
 function kyHello() {
   if (HL.on) return;

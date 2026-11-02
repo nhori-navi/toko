@@ -4,7 +4,8 @@
 // ・Chrome で単独で開いたときは、普通のリンクで移る
 // ・同じアドレス（nhori-navi.github.io）の下にあるので、4つのミルの保存を直接読める（書くのは toko_ で始まるものだけ）
 // 読み込み順：lib.js → michikusa.js → bee.js（ミルビーのページ）／kyou.js（TOP）
-var TOKO_V = 5; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
+// 版6（2026-11-02。仕様メモ 17）：山と飛行機のお題・TOP の入口に［できた］・最後の一言を残す・初日の案内・旅支度の完成と棚の段（持ち物・みちくさ帳・空の帳）
+var TOKO_V = 6; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
 const TOKO_BASE = (() => { try { return new URL('.', document.currentScript.src).href; } catch (e) { return '/toko/'; } })(); // toko フォルダーの場所（TOP から読んでも合うように）
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -129,6 +130,18 @@ function recentItems(c) {
   if (typeof daysAll === 'function') Object.values(daysAll()).forEach(r => { const d = r && r.done, t = d && TASK[d.id]; if (t) add(d.t, '🌿', `みちくさ：${t.t(d.v)}`, 'bee'); });
   const uniq = new Set();
   return out.sort((a, b) => b.t - a.t).filter(x => { if (uniq.has(x.tx)) return false; uniq.add(x.tx); return true; }).slice(0, 4);
+}
+// ---------- 空の帳（版6。月8枚・星座30枚。カードそのものは TenMiru の「空の図鑑」〔v46 で作る〕、ここでは数だけ） ----------
+// TenMiru の sora_day_v1：{days:{日付:{con:[{id,name,t}], moon:{ph,t}〔v46 から〕}}}
+const SKY_N = {moon: 8, con: 30};
+function skyBook() {
+  const days = ((lsGet('sora_day_v1', {}) || {}).days) || {}, con = new Set(), moon = new Set();
+  Object.values(days).forEach(d => {
+    if (!d) return;
+    (d.con || []).forEach(c => { if (c && c.id) con.add(c.id); });
+    if (d.moon && d.moon.ph) moon.add(d.moon.ph);
+  });
+  return {con: con.size, moon: moon.size, n: con.size + moon.size, total: SKY_N.moon + SKY_N.con};
 }
 function swHtml(id, label, note, on) {
   return `<label class="tsw"><span>${label}${note ? `<small>${note}</small>` : ''}</span><input type="checkbox" id="${id}"${on ? ' checked' : ''}></label>`;

@@ -6,6 +6,7 @@
 // ・判定の材料：MichiMiru の散歩のまとめ（IndexedDB michimiru／kv の 'walks'）、スタンプ帳（walk_stamps）、
 //   MeguMiru の行った記録（IndexedDB megu／kv の 'log'・'rec'）、MichiMiru が書くお題の材料（walk_mk_v1：近くの神社・寺・公園の数、MeguMiru のまだの場所）
 // ・達成を数えるのは1日1回だけ
+// ・版6：山（YamaMiru の図鑑 yama_zukan_v1）と飛行機（TenMiru のキャッチ sora_catch_v1）の自動判定のお題。位置が分からないときはカードに一言。TOP の［できた］は mkSelfDone
 const DISTS = {near: {nm: '近所', r: 500}, walk: {nm: '散歩', r: 1500}, far: {nm: '遠出', r: 5000}};
 const DKEYS = Object.keys(DISTS);
 const ALL = ['near', 'walk', 'far'];
@@ -30,6 +31,12 @@ const TASKS = [
   {id: 'newplace', app: 'megu', auto: 1, d: ['far'],
     t: () => '初めての駅か市区町村へ行く', s: () => '初めての駅で降りるか、初めての市区町村を歩きます（MeguMiru に入ります）',
     ok: c => c.megu.place > 0, megu: 1, say: '知らない駅、行ってみる？'},
+  {id: 'peak', app: 'yama', auto: 1, d: ALL,
+    t: () => '山を1つ見つける', s: () => 'YamaMiru でスマホを山に向けて、名前の出た山を図鑑に入れます。遠くの山でも',
+    ok: c => c.yama.peaks > 0, prog: c => c.yama.peaks ? `今日 ${c.yama.peaks}座` : '', say: 'あの山、名前わかる？', bee: 'lookup'},
+  {id: 'catch', app: 'sora', auto: 1, d: ALL,
+    t: () => '飛行機を1機キャッチする', s: () => 'TenMiru で空に向けて、照準に機体を入れます。家の窓からでも',
+    ok: c => c.sora.catch > 0, prog: c => c.sora.catch ? `今日 ${c.sora.catch}機` : '', say: '飛行機、通ってるかな？', bee: 'lookup'},
   // ---- 自己申告 ----
   {id: 'red3', app: 'walk', d: ALL, t: () => '赤いものを3つ見つける', s: () => '看板・花・郵便ポスト……。見つけたら［できた］', say: '赤いもの、いくつあるかな。'},
   {id: 'sky', app: 'sora', d: ALL, t: () => '立ち止まって、空を見上げる', s: () => '雲・鳥・飛行機。何が見えたか', say: '空、見上げてみない？', bee: 'lookup'},
@@ -92,7 +99,7 @@ async function mkCtx(force) {
   if (MK.busy) return MK.busy;
   MK.busy = (async () => {
     const now = Date.now(), d0 = dayStart(now);
-    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, mat: null, meguOn: false,
+    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, yama: {peaks: 0}, sora: {catch: 0}, mat: null, meguOn: false,
       raw: {walks: [], mlog: [], mrec: {}}};   // raw：ボタンの1行と「最近のみるとこ」に使う
     // 散歩のまとめ
     const db = await idbOpen('michimiru');
@@ -127,6 +134,9 @@ async function mkCtx(force) {
         });
       } finally { mdb.close(); }
     }
+    // 版6：YamaMiru の図鑑（今日、初めて見つけた山）・TenMiru のキャッチ（今日）
+    Object.values(((lsGet('yama_zukan_v1', {}) || {}).peaks) || {}).forEach(p => { if (p && p.t1 >= d0 && p.t1 <= now + 60000) c.yama.peaks++; });
+    ((lsGet('sora_catch_v1', {}) || {}).log || []).forEach(e => { if (e && e.t >= d0 && e.t <= now + 60000) c.sora.catch++; });
     // お題の材料（MichiMiru が書く）。3日以内で、今の場所から1km 以内のときだけ使う
     const mat = lsGet('walk_mk_v1', null);
     if (mat && mat.p && c.here && now - mat.t < 3 * 864e5 && distM(mat.p, c.here) < 1000) c.mat = mat;
@@ -219,21 +229,27 @@ function mkRender() {
     else f += `<span class="mkSt">今日はもう達成（${DISTS[rec.done.d].nm}：${esc(TASK[rec.done.id] ? TASK[rec.done.id].t(rec.done.v) : '')}）</span>`;
   } else if (t.auto) {
     const pg = t.prog ? t.prog(c, q.v) : '';
-    f += `<span class="mkSt">歩けば自動で判定${pg ? `・いま <b>${esc(pg)}</b>` : ''}</span>`;
+    f += `<span class="mkSt">${t.app === 'sora' || t.app === 'yama' ? 'スマホを向ければ自動で判定' : '歩けば自動で判定'}${pg ? `・いま <b>${esc(pg)}</b>` : ''}</span>`;
     if (t.megu && c.walkToday && !c.meguOn) f += '<div class="mkWait">MeguMiru を開くと判定します（行った場所は MeguMiru が記録から拾います）</div>';
   } else f += '<button class="mkBtn" type="button" id="mkOk">できた</button>';
   if (!rec.done && !(rec.rr && rec.rr[dist])) f += '<button class="mkSub mkRr" type="button" id="mkRr">↻ 引き直す</button>';
+  // 版6：位置が分からないとき（まだ MichiMiru を開いていない）は、自己申告のお題だけになることを一言
+  if (!c.here && !rec.done) f += '<div class="mkNote">MichiMiru（歩く）を一度開くと、歩くだけで判定するお題も出ます</div>';
   el.innerHTML = h + `<div class="mkFt">${f}</div>`;
   mkWire();
+}
+// 自己申告の［できた］（ミルビーのページのカードと、TOP の入口の両方から。版6）
+function mkSelfDone() {
+  const k = dayKey(), rec = dayRec(k), q = rec && rec.q && rec.q[SET.dist], t = q && TASK[q.id];
+  if (!q || !t || t.auto || rec.done) return false;
+  mkDone(k, rec, SET.dist, q, true); mkRender(); tkHook('done');
+  return true;
 }
 function mkWire() {
   const el = $('mk');
   el.querySelectorAll('.mkDist button').forEach(b => b.onclick = () => mkSetDist(b.dataset.d));
   const ap = el.querySelector('.mkApp'); if (ap) ap.onclick = () => tkGo(ap.dataset.app);
-  const ok = $('mkOk'); if (ok) ok.onclick = () => {
-    const k = dayKey(), rec = dayRec(k), q = rec && rec.q[SET.dist]; if (!q || rec.done) return;
-    mkDone(k, rec, SET.dist, q, true); mkRender(); tkHook('done');
-  };
+  const ok = $('mkOk'); if (ok) ok.onclick = mkSelfDone;
   const un = $('mkUndo'); if (un) un.onclick = mkUndo;
   const rr = $('mkRr'); if (rr) rr.onclick = mkReroll;
 }
