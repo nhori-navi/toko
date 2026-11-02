@@ -7,6 +7,7 @@
 //   MeguMiru の行った記録（IndexedDB megu／kv の 'log'・'rec'）、MichiMiru が書くお題の材料（walk_mk_v1：近くの神社・寺・公園の数、MeguMiru のまだの場所）
 // ・達成を数えるのは1日1回だけ
 // ・版6：山（YamaMiru の図鑑 yama_zukan_v1）と飛行機（TenMiru のキャッチ sora_catch_v1）の自動判定のお題。位置が分からないときはカードに一言。TOP の［できた］は mkSelfDone
+// ・版7：月（TenMiru v46 の空の図鑑 sora_skyz_v1 に今日入った月のカード）と星座（今日見つけた星座）の自動判定のお題。新月の日は月のお題を出さない
 const DISTS = {near: {nm: '近所', r: 500}, walk: {nm: '散歩', r: 1500}, far: {nm: '遠出', r: 5000}};
 const DKEYS = Object.keys(DISTS);
 const ALL = ['near', 'walk', 'far'];
@@ -37,6 +38,12 @@ const TASKS = [
   {id: 'catch', app: 'sora', auto: 1, d: ALL,
     t: () => '飛行機を1機キャッチする', s: () => 'TenMiru で空に向けて、照準に機体を入れます。家の窓からでも',
     ok: c => c.sora.catch > 0, prog: c => c.sora.catch ? `今日 ${c.sora.catch}機` : '', say: '飛行機、通ってるかな？', bee: 'lookup'},
+  {id: 'moon', app: 'sora', auto: 1, d: ALL, need: c => c.sky.moonName !== '新月', val: () => moonNameApprox(),
+    t: v => `月を見上げる（${v || '今夜の月'}）`, s: (c, v) => `${moonWhen(v)}、TenMiru で月に照準を2秒。空の図鑑に月のカードが入ります`,
+    ok: c => c.sky.moon > 0, say: '今夜の月、見た？', bee: 'lookup'},
+  {id: 'constel', app: 'sora', auto: 1, d: ALL,
+    t: () => '星座を1つ見つける', s: () => '暗くなってから、TenMiru で星座の線を照準に2秒。見つけた星座は空の図鑑に入ります',
+    ok: c => c.sky.con > 0, prog: c => c.sky.con ? `今日 ${c.sky.con}つ` : '', say: '星、出てるかな。', bee: 'lookup'},
   // ---- 自己申告 ----
   {id: 'red3', app: 'walk', d: ALL, t: () => '赤いものを3つ見つける', s: () => '看板・花・郵便ポスト……。見つけたら［できた］', say: '赤いもの、いくつあるかな。'},
   {id: 'sky', app: 'sora', d: ALL, t: () => '立ち止まって、空を見上げる', s: () => '雲・鳥・飛行機。何が見えたか', say: '空、見上げてみない？', bee: 'lookup'},
@@ -45,6 +52,8 @@ const TASKS = [
   {id: 'flower', app: 'walk', d: ALL, t: () => '季節の花を見つける', s: () => '庭先・道ばた・公園。いま咲いている花', say: 'どんな花が咲いてるかな。'}
 ];
 const TASK = Object.fromEntries(TASKS.map(t => [t.id, t]));
+// 月齢ごとの見ごろ（お題の説明に）
+const moonWhen = nm => ({'三日月': '日が沈んだあとの西の空で', '上弦の月': '夕方から夜の空で', '十三夜': '夜の空で', '満月': '夜の空で', '寝待月': '夜遅くの空で', '下弦の月': '夜明け前か朝の空で', '有明の月': '夜明け前の東の空で'})[nm] || '空で';
 const MK = {ctx: null, at: 0, busy: null};
 // 画面ごとの知らせ先（ミルビーのページ・TOP がそれぞれ決める）。ev：reroll・done・undo・dist
 const tkHook = ev => { try { if (typeof window.tkOnChange === 'function') window.tkOnChange(ev); } catch (e) {} };
@@ -99,7 +108,7 @@ async function mkCtx(force) {
   if (MK.busy) return MK.busy;
   MK.busy = (async () => {
     const now = Date.now(), d0 = dayStart(now);
-    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, yama: {peaks: 0}, sora: {catch: 0}, mat: null, meguOn: false,
+    const c = {now, d0, here: here(), sum: {newMesh: 0, newRoad: 0}, maxWalk: 0, avg: 0, walkToday: false, stamp: 0, megu: {spot: 0, place: 0, ok: false}, yama: {peaks: 0}, sora: {catch: 0}, sky: {moon: 0, con: 0, moonName: moonNameApprox(now)}, mat: null, meguOn: false,
       raw: {walks: [], mlog: [], mrec: {}}};   // raw：ボタンの1行と「最近のみるとこ」に使う
     // 散歩のまとめ
     const db = await idbOpen('michimiru');
@@ -137,6 +146,8 @@ async function mkCtx(force) {
     // 版6：YamaMiru の図鑑（今日、初めて見つけた山）・TenMiru のキャッチ（今日）
     Object.values(((lsGet('yama_zukan_v1', {}) || {}).peaks) || {}).forEach(p => { if (p && p.t1 >= d0 && p.t1 <= now + 60000) c.yama.peaks++; });
     ((lsGet('sora_catch_v1', {}) || {}).log || []).forEach(e => { if (e && e.t >= d0 && e.t <= now + 60000) c.sora.catch++; });
+    // 版7：TenMiru の空の図鑑（今日入った月のカード・今日見つけた星座）
+    try { Object.assign(c.sky, skyToday(d0, now)); } catch (e) {}
     // お題の材料（MichiMiru が書く）。3日以内で、今の場所から1km 以内のときだけ使う
     const mat = lsGet('walk_mk_v1', null);
     if (mat && mat.p && c.here && now - mat.t < 3 * 864e5 && distM(mat.p, c.here) < 1000) c.mat = mat;

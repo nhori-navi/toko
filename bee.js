@@ -57,7 +57,7 @@ function growItems() {
   return [{t: 'ちょっと遠くまで来たね。', f: 'bow', ms: 4000, then: () => { const l = beeLs(); l.stage = st; l.scene = sc; lsSet(K_BEE, l); pageRender(); }}];
 }
 // みちくさ帳に出す短い名前（版6）
-const KIND_NM = {mesh: '新しいマス', road: 'はじめての道', long: 'いつもより長く', stamp: '神社・寺・公園', spot: 'まだの場所', newplace: '初めての駅・町', peak: '山を見つける', catch: '飛行機1機', red3: '赤いもの3つ', sky: '空を見上げる', shop: '店をのぞく', alley: '知らない路地', flower: '季節の花'};
+const KIND_NM = {mesh: '新しいマス', road: 'はじめての道', long: 'いつもより長く', stamp: '神社・寺・公園', spot: 'まだの場所', newplace: '初めての駅・町', peak: '山を見つける', catch: '飛行機1機', moon: '月を見上げる', constel: '星座を見つける', red3: '赤いもの3つ', sky: '空を見上げる', shop: '店をのぞく', alley: '知らない路地', flower: '季節の花'};
 // 版6：持ち物4つがそろって、まだ見せていなければ、お辞儀して「旅支度、できたね。」（そのとき記念の1枚が出る）
 function tripItems() {
   const d = beeData(), ls = beeLs();
@@ -126,6 +126,7 @@ function pageRender() {
   const sk = skyBook();
   $('bpSkyN').textContent = `${sk.n}／${sk.total}`;
   $('bpSkyTx').textContent = `月 ${sk.moon}／${SKY_N.moon}・星座 ${sk.con}／${SKY_N.con}`;
+  $('bpSky').textContent = IN_WALK ? 'TenMiru を開く（記録 → 空の図鑑）' : '空の図鑑を開く';
   const badges = Object.values(lsGet('walk_badges_v1', {}) || {}).filter(v => Array.isArray(v) && v.length).length;
   $('bpBadge').textContent = `🏅 Miru バッジ ${badges}／10`;
   if (!BEE.busy) beeArt(stageArt());
@@ -172,7 +173,7 @@ async function beeInit() {
   $('bpSay').onclick = () => { if ($('bpSay').classList.contains('tap')) beeNext(); };
   $('bpArt').onclick = () => { if ($('bpSay').classList.contains('tap')) beeNext(); };
   $('bpNikki').onclick = () => tkGo('walk', 'nikki');
-  $('bpSky').onclick = () => tkGo('sora');
+  $('bpSky').onclick = () => tkGo('sora', 'skyz');   // 版7：Web では空の図鑑を直接開く（アプリの中では TenMiru → 記録 → 空の図鑑）
   $('bpVer').textContent = `ミルトコ 版${TOKO_V}`;
   pageRender(); mkRender();
   try { await mkRefresh(true); } catch (e) {}
