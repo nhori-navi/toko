@@ -7,7 +7,10 @@
 // ・版5：ホーム画面のアイコンから開いたとき（Web 版のミルトコ。IN_WEBAPP）も、アプリと同じ毎日使う形。ボタンは普通に移る
 // ・ブラウザで開いたとき（Web）は何もしない（ミルビーの紹介の段は、版4 から HP の index.html に直接書いた）
 // ・版6：ミルビーの入口に、自己申告のお題のときだけ［できた］（押すと記録してミルビーのページへ。反応はそこで）。自己紹介の6を「まずは『歩く』」に
+// ・版8：達成した日に TOP を開いたとき、入口の顔が1回だけ笑顔（1秒。話さない）。自己紹介に「上の絵も押せるよ」の1枚（7枚に）
 const BEE_FACE = TOKO_BASE + 'img/bee_side.svg#svgView(viewBox(33.4,29,367.5,367.5))';
+const BEE_FACE_JOY = TOKO_BASE + 'img/bee_joy.svg#svgView(viewBox(1020.9,17,245,245))';   // 版8：笑顔（横向きと目の位置をそろえた切り抜き）
+const KYF = {smiled: '', until: 0};   // 笑顔を見せた日・笑顔でいる期限
 const KY = {ctx: null};
 const HERO_GO = {michi: 'walk', megu: 'megu', ten: 'sora', yama: 'yama'};
 
@@ -91,7 +94,10 @@ function kyRender() {
   const rec = dayRec(), q = rec && rec.q && rec.q[SET.dist], t = q && TASK[q.id], done = rec && rec.done;
   const title = done && TASK[done.id] ? TASK[done.id].t(done.v) : t ? t.t(q.v) : '毎朝ひとつ、寄り道のお題';
   const selfOk = !done && t && !t.auto;   // 版6：自己申告のお題のときだけ［できた］
-  $('tkBee').innerHTML = `<button class="bm" type="button" aria-label="ミルビーのページを開く"><img src="${BEE_FACE}" alt=""><span class="tx"><b>🐦 ミルビーのみちくさ</b><span>${esc(title)}</span></span>` +
+  // 版8：達成した日に初めて描くとき、顔を1秒だけ笑顔に（話さない）
+  if (done && KYF.smiled !== dayKey()) { KYF.smiled = dayKey(); KYF.until = Date.now() + 1000; setTimeout(kyRender, 1050); }   // 描き直しが続いても1秒は笑顔のまま
+  const smile = Date.now() < (KYF.until || 0);
+  $('tkBee').innerHTML = `<button class="bm" type="button" aria-label="ミルビーのページを開く"><img src="${smile ? BEE_FACE_JOY : BEE_FACE}" alt=""><span class="tx"><b>🐦 ミルビーのみちくさ</b><span>${esc(title)}</span></span>` +
     `<span class="st${done ? ' ok' : ''}">${done ? '✓ 達成' : selfOk ? '' : '›'}</span></button>` + (selfOk ? '<button class="bok" type="button">できた</button>' : '') + (beeNews() ? '<span class="dot"></span>' : '');
   // 4つのミル
   $('tkApps').innerHTML = Object.entries(APPS).map(([k, a]) =>
@@ -123,6 +129,7 @@ function kySet() {
 // ---------- 初めて開いたときのミルビーの自己紹介（1回だけ） ----------
 const HELLO = [['はじめまして。ハシビロコウのミルビーです。', 'front'], ['なんでハシビロコウなんだ？って思ったでしょ。', 'side'],
   ['……作った人が、アンバランスな感じが好きなんだって。', 'front'], ['ほんとは、何時間でも動かないで立ってる鳥なんだけどね。', 'lookup'],
+  ['上の絵の道や飛行機、山の名前も押せるよ。', 'side'],
   ['ここでは毎朝ひとつ、「みちくさ」のお題を出すよ。', 'side'], ['お題は、このカードから。まずは『歩く』を開いて、一度歩いてみて。', 'joy']];
 const HL = {i: 0, on: false};
 function kyHello() {

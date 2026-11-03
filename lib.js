@@ -6,7 +6,9 @@
 // 読み込み順：lib.js → michikusa.js → bee.js（ミルビーのページ）／kyou.js（TOP）
 // 版6（2026-11-02。仕様メモ 17）：山と飛行機のお題・TOP の入口に［できた］・最後の一言を残す・初日の案内・旅支度の完成と棚の段（持ち物・みちくさ帳・空の帳）
 // 版7（2026-11-03）：月・星座のお題、空の帳は TenMiru v46 の sora_skyz_v1（ずっと残す帳）から数える、最近のみるとこに月のカードと星座、TenMiru の空の図鑑へのリンク
-var TOKO_V = 7; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
+// 版8（2026-11-03）：夜の眠い反応・景色の時間帯・季節のお題・TOP の顔が1回笑う・自己紹介に「上の絵も押せる」・引き直しの説明（仕様 17-4）
+// 版9（2026-11-03）：月のふりかえり（月が替わって初めてミルビーのページを開いたとき、先月の1枚。保存・共有できる）
+var TOKO_V = 9; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
 const TOKO_BASE = (() => { try { return new URL('.', document.currentScript.src).href; } catch (e) { return '/toko/'; } })(); // toko フォルダーの場所（TOP から読んでも合うように）
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -24,6 +26,8 @@ function distM(a, b) {
 // 1日の区切りは朝4時（みちくさは毎朝4時に入れ替わる）
 const DAY_H = 4;
 const dayKey = (t = Date.now()) => ymd(t - DAY_H * 3600000);
+// 時間帯（景色の色味。版8）：朝 5〜9時・昼・夕方 16〜18時・夜 19〜4時
+const dayPart = (t = Date.now()) => { const h = new Date(t).getHours(); return h >= 5 && h < 10 ? 'morning' : h >= 10 && h < 16 ? 'noon' : h >= 16 && h < 19 ? 'evening' : 'night'; };
 const dayStart = (t = Date.now()) => { const k = dayKey(t); return new Date(k + 'T' + pad2(DAY_H) + ':00:00').getTime(); };
 const mdw = k => { const d = new Date(k + 'T12:00:00'); return `${d.getMonth() + 1}/${d.getDate()}（${'日月火水木金土'[d.getDay()]}）`; };
 
@@ -167,6 +171,38 @@ function skyToday(d0, now) {
   // その日の星座は、帳に入らなかった分（2つ目から）も TenMiru の今日の記録で数える
   Object.values(((lsGet('sora_day_v1', {}) || {}).days) || {}).forEach(d => (d && d.con || []).forEach(c => { if (c && c.t >= d0 && c.t <= now + 60000) con = Math.max(con, 1); }));
   return {con, moon};
+}
+// ---------- 月のふりかえり（版9）：その月に4つのミルで見たもの・行った所を数える ----------
+const ymKey = (t = Date.now()) => dayKey(t).slice(0, 7);
+const prevYm = (ym = ymKey()) => { const [y, m] = ym.split('-').map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${pad2(m - 1)}`; };
+function monthStats(ym, c) {
+  const [y, m] = ym.split('-').map(Number), t0 = new Date(y, m - 1, 1, DAY_H).getTime(), t1 = new Date(y, m, 1, DAY_H).getTime();
+  const inM = t => t >= t0 && t < t1;
+  const o = {ym, y, m, dist: 0, newRoad: 0, walks: 0, mesh: 0, st: 0, places: 0, peaks: 0, planes: 0, con: 0, moon: 0, mk: 0, days: 0};
+  ((c && c.raw && c.raw.walks) || []).forEach(w => { if (w && w.t0 && inM(w.t0)) { o.walks++; o.dist += w.dist || 0; o.newRoad += w.newRoad || 0; o.mesh += w.newMesh || 0; } });
+  const rec = (c && c.raw && c.raw.mrec) || {}, seen = new Set();
+  ((c && c.raw && c.raw.mlog) || []).forEach(e => {
+    if (!e || !inM(e.t) || (e.k !== 'new' && e.k !== 'up') || seen.has(e.id)) return;
+    const r = rec[e.id]; if (!r || !(r.lv >= 2)) return;
+    seen.add(e.id); if (r.s && r.s.sh === 'st') o.st++; else o.places++;
+  });
+  Object.values(((lsGet('yama_zukan_v1', {}) || {}).peaks) || {}).forEach(p => { if (p && p.t1 && inM(p.t1)) o.peaks++; });
+  ((lsGet('sora_catch_v1', {}) || {}).log || []).forEach(e => { if (e && inM(e.t)) o.planes++; });
+  const b = skyBook(); Object.values(b.conT).forEach(t => { if (inM(t)) o.con++; }); Object.values(b.moonT).forEach(t => { if (inM(t)) o.moon++; });
+  if (typeof daysAll === 'function') Object.entries(daysAll()).forEach(([k, r]) => { if (k.slice(0, 7) === ym && r && r.done && TASK[r.done.id]) o.mk++; });
+  Object.keys(lsGet('walk_days_v1', {}) || {}).forEach(k => { if (k.slice(0, 7) === ym) o.days++; });
+  o.any = !!(o.walks || o.st || o.places || o.peaks || o.planes || o.con || o.moon || o.mk);
+  return o;
+}
+// ミルビーの一言（いちばん目立つものから）
+function monthSay(o) {
+  if (!o.any) return 'おやすみの月も、ある。';
+  if (o.newRoad >= 5000) return '知らない道、ずいぶん歩いたね。';
+  if (o.peaks >= 3) return '山の名前、だいぶ覚えたね。';
+  if (o.planes >= 5) return '空、よく見上げてたね。';
+  if (o.st + o.places >= 3) return 'いろんな所に行ったね。';
+  if (o.mk >= 5) return 'みちくさ、たくさんできたね。';
+  return 'ぼちぼち、だね。それでいい。';
 }
 function swHtml(id, label, note, on) {
   return `<label class="tsw"><span>${label}${note ? `<small>${note}</small>` : ''}</span><input type="checkbox" id="${id}"${on ? ' checked' : ''}></label>`;
