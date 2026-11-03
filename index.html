@@ -35,6 +35,12 @@ button{font:inherit;color:inherit}
 .scene{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:3/2;background:#dfe9e6}
 .scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 :root.dark .scene .bg{filter:brightness(.72) saturate(.9)}
+/* 時間帯の色味（版8）：背景の上に薄い色。ミルビーと吹き出しはその上 */
+.scene::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .6s}
+.scene[data-part=morning]::before{opacity:1;background:linear-gradient(180deg,rgba(255,214,160,.32),rgba(255,240,200,.1) 60%,rgba(255,255,255,0))}
+.scene[data-part=evening]::before{opacity:1;background:linear-gradient(180deg,rgba(255,150,90,.38),rgba(255,120,110,.18) 55%,rgba(90,60,110,.22))}
+.scene[data-part=night]::before{opacity:1;background:linear-gradient(180deg,rgba(20,30,70,.5),rgba(30,40,80,.4) 60%,rgba(10,20,40,.5))}
+#bpArt,#bpSay{z-index:2}
 #bpArt{position:absolute;right:10%;bottom:4%;height:86%;transform-origin:50% 100%;cursor:pointer}
 #bpArt.tilt{transform:rotate(-7deg)}
 #bpArt.shake{animation:tkShake .32s linear 3}
@@ -100,10 +106,11 @@ button{font:inherit;color:inherit}
 .sky{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sky .lnk{margin:0}
 /* 旅支度の記念の1枚 */
-#bpTrip{border:2px solid var(--mkb);background:var(--mk)}
-#bpTrip[hidden]{display:none}
-#bpTripImg{display:block;width:100%;border-radius:10px;margin-top:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-#bpTripImg[hidden]{display:none}
+#bpTrip,#bpMonth{border:2px solid var(--mkb);background:var(--mk)}
+#bpTrip[hidden],#bpMonth[hidden]{display:none}
+#bpTripImg,#bpMonthImg{display:block;width:100%;border-radius:10px;margin-top:8px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+#bpTripImg[hidden],#bpMonthImg[hidden]{display:none}
+#bpMonthBtn{display:block;width:100%;margin-top:8px;text-align:center}
 #bpVer{text-align:center;margin-top:16px}
 </style>
 </head>
@@ -114,17 +121,19 @@ button{font:inherit;color:inherit}
   <div class="stg" id="bpStage"></div>
   <section class="mk" id="mk" aria-live="polite"></section>
   <div class="stats" id="bpStats"></div>
+  <button class="lnk" type="button" id="bpMonthBtn">📆 先月のふりかえりを見る</button>
+  <div class="box" id="bpMonth" hidden><h3 id="bpMonthH">先月のふりかえり</h3><div class="sub" id="bpMonthTx"></div><img id="bpMonthImg" alt="月のふりかえりの1枚" hidden><div class="sub" style="margin-top:6px">長押しで保存できます</div><button class="lnk" type="button" id="bpMonthSave">保存・共有</button> <button class="lnk" type="button" id="bpMonthClose">閉じる</button></div>
   <details class="box shelfBox" id="bpShelfBox" open><summary>🎒 持ち物<span class="n" id="bpShelfN"></span></summary><div class="in"><div class="sub">それぞれのミルのみちくさを初めて達成すると、ミルビーが持ち物をもらいます。4つそろうと旅支度の完成です</div><div class="shelf" id="bpShelf"></div></div></details>
   <div class="box" id="bpTrip" hidden><h3>旅支度、できた。</h3><div class="sub" id="bpTripTx"></div><img id="bpTripImg" alt="旅支度の記念の1枚" hidden><div class="sub" style="margin-top:6px">長押しで保存できます</div><button class="lnk" type="button" id="bpTripSave">保存・共有</button></div>
   <details class="box shelfBox"><summary>🌿 みちくさ帳<span class="n" id="bpKindsN"></span></summary><div class="in"><div class="sub">これまでに達成したお題の種類。空いている枠は、まだ出会っていないお題です</div><div class="shelf kinds" id="bpKinds"></div></div></details>
   <details class="box shelfBox"><summary>🌙 空の帳<span class="n" id="bpSkyN"></span></summary><div class="in"><div class="sub">TenMiru で見つけた月と星座。カードは TenMiru の「空の図鑑」にあります</div><div class="sky"><span id="bpSkyTx"></span><button class="lnk" type="button" id="bpSky">TenMiru を開く</button></div></div></details>
   <div class="box"><h3 id="bpBadge">🏅 Miru バッジ</h3><div class="sub">4つのミルにまたがるバッジ。MichiMiru の散歩日記の、いちばん下にあります</div><button class="lnk" type="button" id="bpNikki">散歩日記を見る</button></div>
-  <div class="box"><h3>きょうのみちくさ</h3><div class="sub" style="line-height:1.7">毎朝4時に、小さなお題が1つ出ます。「近所・散歩・遠出」で距離を選べます。気に入らなければ「↻ 引き直す」（距離ごとに1回）。「歩けば自動で判定」のお題は、MichiMiru で記録して歩くと判定します。［できた］のお題は自分で押します（その日のうちなら取り消せます）。山・飛行機・月・星座のお題は、YamaMiru・TenMiru でスマホを向けると判定します。達成として数えるのは1日1回。できなかった日も、次の朝に静かに入れ替わるだけです。</div></div>
+  <div class="box"><h3>きょうのみちくさ</h3><div class="sub" style="line-height:1.7">毎朝4時に、小さなお題が1つ出ます。「近所・散歩・遠出」で距離を選べます。距離を切り替えると別のお題になります。気に入らなければ「↻ 引き直す」（距離ごとに1回）。「歩けば自動で判定」のお題は、MichiMiru で記録して歩くと判定します。［できた］のお題は自分で押します（その日のうちなら取り消せます）。山・飛行機・月・星座のお題は、YamaMiru・TenMiru でスマホを向けると判定します。達成として数えるのは1日1回。できなかった日も、次の朝に静かに入れ替わるだけです。</div></div>
   <div class="sub" id="bpVer"></div>
 </div>
-<script src="lib.js?v=7"></script>
-<script src="michikusa.js?v=7"></script>
-<script src="bee.js?v=7"></script>
+<script src="lib.js?v=9"></script>
+<script src="michikusa.js?v=9"></script>
+<script src="bee.js?v=9"></script>
 <script>beeInit();</script>
 </body>
 </html>
