@@ -205,17 +205,17 @@ async function monthCard(o) {
   if (o.mk) rows.push(['🌿', `みちくさ ${o.mk}回`, '']);
   if (o.days) rows.push(['📅', `出かけた日 ${o.days}日`, '']);
   if (!rows.length) rows.push(['', 'この月の記録はありません', '']);
-  let y = 185;
+  let y = 178;
   rows.slice(0, 6).forEach(([ic, a, b]) => {
     g.font = `34px ${jp}`; g.fillStyle = '#1f2b2a'; g.fillText(ic, 70, y);
     g.font = `bold 32px ${jp}`; g.fillText(a, 130, y); const aw = g.measureText(a).width;
     if (b) { g.font = `24px ${jp}`; g.fillStyle = '#5f6d6a'; g.fillText(b, 130 + aw + 24, y); }
-    y += 62;
+    y += 56;
   });
   // ミルビーと一言
   const say = monthSay(o);
   g.font = `bold 28px ${jp}`; g.fillStyle = '#2f4c53';
-  const sw = g.measureText(say).width + 44, sx = W - 70 - sw, sy = H - 60 - 240 - 76;   // ミルビーの頭の上（右寄せ）
+  const sw = g.measureText(say).width + 44, sx = W - 70 - 200 - sw, sy = H - 60 - 96;   // 版10：ミルビーの左下（行は最大6行で y 458 まで。重ならない）
   g.fillStyle = '#fff'; g.strokeStyle = '#d9cfae'; g.lineWidth = 3; g.beginPath(); g.roundRect(sx, sy, sw, 58, 18); g.fill(); g.stroke();
   g.fillStyle = '#1f2b2a'; g.fillText(say, sx + 22, sy + 40);
   try {
@@ -224,7 +224,7 @@ async function monthCard(o) {
     const h = 240, w = im.naturalWidth && im.naturalHeight ? h * im.naturalWidth / im.naturalHeight : h;
     g.drawImage(im, W - 70 - w, H - 60 - h, w, h);
   } catch (e) {}
-  g.textAlign = 'left'; g.fillStyle = '#5f6d6a'; g.font = `22px ${jp}`; g.fillText('ミルトコ・ミルビー', 72, H - 72);
+  g.textAlign = 'left'; g.fillStyle = '#5f6d6a'; g.font = `22px ${jp}`; g.fillText('ミルトコ・ミルビー', 72, H - 50);
   const url = cv.toDataURL('image/png');
   const img = $('bpMonthImg'); img.src = url; img.hidden = false;
   $('bpMonthSave').onclick = () => cardSave(url, `mirutoko-${o.ym}.png`, `${o.m}月のふりかえり`);

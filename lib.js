@@ -8,7 +8,8 @@
 // 版7（2026-11-03）：月・星座のお題、空の帳は TenMiru v46 の sora_skyz_v1（ずっと残す帳）から数える、最近のみるとこに月のカードと星座、TenMiru の空の図鑑へのリンク
 // 版8（2026-11-03）：夜の眠い反応・景色の時間帯・季節のお題・TOP の顔が1回笑う・自己紹介に「上の絵も押せる」・引き直しの説明（仕様 17-4）
 // 版9（2026-11-03）：月のふりかえり（月が替わって初めてミルビーのページを開いたとき、先月の1枚。保存・共有できる）
-var TOKO_V = 9; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
+// 版10（2026-11-03）：月のふりかえりの1枚で、ミルビーの一言が行に重ならないように（一言はミルビーの左下へ）
+var TOKO_V = 10; // MichiMiru（mirutoko.js）が「読み込めた」の印に読むので var
 const TOKO_BASE = (() => { try { return new URL('.', document.currentScript.src).href; } catch (e) { return '/toko/'; } })(); // toko フォルダーの場所（TOP から読んでも合うように）
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
